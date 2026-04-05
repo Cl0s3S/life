@@ -309,8 +309,8 @@ if (!monthExp.length && !currentMonthIncomes.length) {
     {
       icon:  '🧩',
       label: 'modules actifs',
-      val:   '4 / 7',
-      sub:   'Budget · Portfolio · Planning · Tracker — 3 en construction',
+      val:   '5 / 7',
+      sub:   'Budget · Portfolio · Planning · Tracker · Backlog — 2 en construction',
       cls:   '',
     },
     {
@@ -349,7 +349,7 @@ const ROADMAP = [
   { num: '02', icon: '💼', name: 'Portfolio', desc: 'CV · identité · projets',              badge: 'done',   label: 'terminé'  },
   { num: '03', icon: '🗓️', name: 'Planning',  desc: 'Emploi du temps optimisé',             badge: 'done',   label: 'terminé'  },
   { num: '04', icon: '📚', name: 'Tracker',   desc: 'Lecture · cours · progression',        badge: 'done',   label: 'terminé'  },
-  { num: '05', icon: '🎮', name: 'Backlog',   desc: 'Jeux · statuts · temps de jeu',        badge: 'soon',   label: 'à venir'  },
+  { num: '05', icon: '🎮', name: 'Backlog',   desc: 'Jeux · statuts · temps de jeu',        badge: 'done',   label: 'terminé'  },
   { num: '06', icon: '📥', name: 'Inbox',     desc: 'Centralisation des emails importants', badge: 'soon',   label: 'à venir'  },
   { num: '07', icon: '📊', name: 'Insights',  desc: 'Analyse globale · recommandations IA', badge: 'soon',   label: 'dernier'  },
 ];
@@ -533,6 +533,104 @@ ROADMAP.forEach(r => {
     : '';
 
   el.innerHTML = statsHtml + `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-md);padding:0 14px">${booksHtml || '<div style="padding:14px 0;text-align:center;font-size:12px;color:var(--muted)">aucun livre en cours</div>'}${moreHtml}</div>`;
+})();
+
+/* ═══════════════════════════════════════════
+   BACKLOG PANEL — aperçu depuis le dashboard
+═══════════════════════════════════════════ */
+(function renderBacklogPanel() {
+  const el = document.getElementById('backlog-body');
+  if (!el) return;
+
+  let games = [];
+  try { games = JSON.parse(localStorage.getItem('backlog_v1') || '[]'); } catch(e) {}
+
+  function getTotalMins(g) { return g.sessions.reduce((a, s) => a + s.durationMins, 0); }
+  function fmtH(m) {
+    const h = Math.floor(m / 60), mn = m % 60;
+    if (!h) return `${mn}min`;
+    if (!mn) return `${h}h`;
+    return `${h}h${String(mn).padStart(2,'0')}`;
+  }
+
+  const STATUS_COLOR = { wishlist:'#6b6a6f', playing:'#60a5fa', done:'#34d399', abandoned:'#f87171' };
+  const STATUS_LABEL = { wishlist:'wishlist', playing:'en cours', done:'terminé', abandoned:'abandonné' };
+
+  if (!games.length) {
+    el.innerHTML = `<div style="padding:20px 0;text-align:center;color:var(--muted);font-size:12px">
+      backlog vide — <a href="https://cl0s3s.github.io/backlog/" target="_blank" style="color:var(--accent);text-decoration:none">ajouter un jeu ↗</a>
+    </div>`;
+    return;
+  }
+
+  const totalMins  = games.reduce((a, g) => a + getTotalMins(g), 0);
+  const playing    = games.filter(g => g.status === 'playing').length;
+  const done       = games.filter(g => g.status === 'done').length;
+  const wishlist   = games.filter(g => g.status === 'wishlist').length;
+
+  // Ce mois
+  const now = new Date();
+  const minsMonth = games.reduce((acc, g) => acc + g.sessions.filter(s => {
+    const d = new Date(s.date);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).reduce((a, s) => a + s.durationMins, 0), 0);
+
+  const statsHtml = `
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;margin-bottom:16px">
+      <div style="padding:12px 14px;border-right:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">en cours</div>
+        <div style="font-family:var(--font-disp);font-size:20px;font-weight:700;color:#60a5fa">${playing}</div>
+      </div>
+      <div style="padding:12px 14px;border-right:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">terminés</div>
+        <div style="font-family:var(--font-disp);font-size:20px;font-weight:700;color:#34d399">${done}</div>
+      </div>
+      <div style="padding:12px 14px;border-right:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">wishlist</div>
+        <div style="font-family:var(--font-disp);font-size:20px;font-weight:700;color:var(--text)">${wishlist}</div>
+      </div>
+      <div style="padding:12px 14px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">ce mois</div>
+        <div style="font-family:var(--font-disp);font-size:20px;font-weight:700;color:var(--accent)">${fmtH(minsMonth)}</div>
+      </div>
+    </div>`;
+
+  // Top 5 jeux par temps
+  const topGames = [...games].filter(g => getTotalMins(g) > 0)
+    .sort((a, b) => getTotalMins(b) - getTotalMins(a)).slice(0, 5);
+
+  // En cours
+  const inProgress = games.filter(g => g.status === 'playing').slice(0, 3);
+  const displayList = inProgress.length ? inProgress : topGames.slice(0, 4);
+  const listTitle   = inProgress.length ? 'en cours' : 'top jeux';
+
+  const listHtml = displayList.map(g => {
+    const mins = getTotalMins(g);
+    const color = STATUS_COLOR[g.status];
+    const coverHtml = g.coverUrl
+      ? `<img src="${g.coverUrl}" alt="" style="width:36px;height:36px;object-fit:cover;border-radius:6px;flex-shrink:0" onerror="this.style.display='none'">`
+      : `<div style="width:36px;height:36px;background:var(--bg3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎮</div>`;
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+        ${coverHtml}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.title}</div>
+          <div style="font-size:10px;color:${color}">${STATUS_LABEL[g.status]} · ${g.platform}</div>
+        </div>
+        <div style="font-family:var(--font-disp);font-size:13px;font-weight:600;color:var(--text);white-space:nowrap">${mins ? fmtH(mins) : '—'}</div>
+      </div>`;
+  }).join('');
+
+  const moreCount = games.filter(g => g.status === 'playing').length > 3
+    ? `<div style="padding:9px 0;text-align:center;font-size:11px;color:var(--muted)">+${games.filter(g=>g.status==='playing').length-3} jeux — <a href="https://cl0s3s.github.io/backlog/" target="_blank" style="color:var(--accent);text-decoration:none">voir tout ↗</a></div>`
+    : '';
+
+  el.innerHTML = statsHtml + `
+    <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px">${listTitle}</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-md);padding:0 14px">
+      ${listHtml || '<div style="padding:14px 0;text-align:center;font-size:12px;color:var(--muted)">aucun jeu</div>'}
+      ${moreCount}
+    </div>`;
 })();
 
 /* ═══════════════════════════════════════════
