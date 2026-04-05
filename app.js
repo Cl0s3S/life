@@ -309,8 +309,8 @@ if (!monthExp.length && !currentMonthIncomes.length) {
     {
       icon:  '🧩',
       label: 'modules actifs',
-      val:   '3 / 7',
-      sub:   'Budget · Portfolio · Planning — 4 en construction',
+      val:   '4 / 7',
+      sub:   'Budget · Portfolio · Planning · Tracker — 3 en construction',
       cls:   '',
     },
     {
@@ -348,7 +348,7 @@ const ROADMAP = [
   { num: '01', icon: '💰', name: 'Budget',    desc: 'Suivi des dépenses & revenus',        badge: 'done',   label: 'terminé'  },
   { num: '02', icon: '💼', name: 'Portfolio', desc: 'CV · identité · projets',              badge: 'done',   label: 'terminé'  },
   { num: '03', icon: '🗓️', name: 'Planning',  desc: 'Emploi du temps optimisé',             badge: 'done',   label: 'terminé'  },
-  { num: '04', icon: '📚', name: 'Tracker',   desc: 'Lecture · cours · progression',        badge: 'soon',   label: 'à venir'  },
+  { num: '04', icon: '📚', name: 'Tracker',   desc: 'Lecture · cours · progression',        badge: 'done',   label: 'terminé'  },
   { num: '05', icon: '🎮', name: 'Backlog',   desc: 'Jeux · statuts · temps de jeu',        badge: 'soon',   label: 'à venir'  },
   { num: '06', icon: '📥', name: 'Inbox',     desc: 'Centralisation des emails importants', badge: 'soon',   label: 'à venir'  },
   { num: '07', icon: '📊', name: 'Insights',  desc: 'Analyse globale · recommandations IA', badge: 'soon',   label: 'dernier'  },
@@ -459,6 +459,80 @@ ROADMAP.forEach(r => {
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-md);padding:0 14px">
       ${tlHtml}${moreHtml}
     </div>`;
+})();
+
+/* ═══════════════════════════════════════════
+   TRACKER PANEL — aperçu depuis le dashboard
+═══════════════════════════════════════════ */
+(function renderTrackerPanel() {
+  const el = document.getElementById('tracker-body');
+  if (!el) return;
+
+  let books = [];
+  try { books = JSON.parse(localStorage.getItem('tracker_v1') || '[]'); } catch(e) {}
+
+  const TYPE_EMOJI = { roman: '📖', manga: '🎌', bd: '🖼' };
+
+  function getCurrentPage(book) {
+    if (!book.sessions.length) return book.startPage;
+    return book.sessions[book.sessions.length - 1].page;
+  }
+  function getProgress(book) {
+    const cur = getCurrentPage(book);
+    return Math.min(((cur - book.startPage) / (book.totalPages - book.startPage)) * 100, 100);
+  }
+
+  if (!books.length) {
+    el.innerHTML = `<div style="padding:20px 0;text-align:center;color:var(--muted);font-size:12px">
+      bibliothèque vide — <a href="https://cl0s3s.github.io/tracker/" target="_blank" style="color:var(--accent);text-decoration:none">ajouter un livre ↗</a>
+    </div>`;
+    return;
+  }
+
+  const reading = books.filter(b => b.status === 'reading');
+  const done    = books.filter(b => b.status === 'done').length;
+  const totalPages = books.reduce((acc, b) => {
+    const cur = getCurrentPage(b);
+    return acc + (cur - b.startPage);
+  }, 0);
+
+  const statsHtml = `
+    <div style="display:flex;gap:0;margin-bottom:16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden">
+      <div style="flex:1;padding:12px 14px;border-right:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">en cours</div>
+        <div style="font-family:var(--font-disp);font-size:20px;font-weight:700;color:var(--text)">${reading.length}</div>
+      </div>
+      <div style="flex:1;padding:12px 14px;border-right:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">terminés</div>
+        <div style="font-family:var(--font-disp);font-size:20px;font-weight:700;color:var(--text)">${done}</div>
+      </div>
+      <div style="flex:1;padding:12px 14px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">pages lues</div>
+        <div style="font-family:var(--font-disp);font-size:20px;font-weight:700;color:var(--text)">${totalPages.toLocaleString('fr-FR')}</div>
+      </div>
+    </div>`;
+
+  const booksHtml = reading.slice(0, 4).map(book => {
+    const pct = getProgress(book);
+    const cur = getCurrentPage(book);
+    return `
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:20px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:${book.color}22;border-radius:6px;flex-shrink:0">${TYPE_EMOJI[book.type] || '📖'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px">${book.title}</div>
+          <div style="height:2px;background:var(--bg3);border-radius:2px;overflow:hidden">
+            <div style="height:2px;background:${book.color};width:${pct.toFixed(1)}%;border-radius:2px"></div>
+          </div>
+        </div>
+        <div style="font-family:var(--font-disp);font-size:13px;font-weight:600;color:${book.color};flex-shrink:0">${pct.toFixed(0)}%</div>
+      </div>`;
+  }).join('');
+
+  const moreHtml = reading.length > 4
+    ? `<div style="padding:10px 0;text-align:center;font-size:11px;color:var(--muted)">+${reading.length - 4} autres — <a href="https://cl0s3s.github.io/tracker/" target="_blank" style="color:var(--accent);text-decoration:none">voir tout ↗</a></div>`
+    : '';
+
+  el.innerHTML = statsHtml + `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-md);padding:0 14px">${booksHtml || '<div style="padding:14px 0;text-align:center;font-size:12px;color:var(--muted)">aucun livre en cours</div>'}${moreHtml}</div>`;
 })();
 
 /* ═══════════════════════════════════════════
