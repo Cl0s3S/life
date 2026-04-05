@@ -309,8 +309,8 @@ if (!monthExp.length && !currentMonthIncomes.length) {
     {
       icon:  '🧩',
       label: 'modules actifs',
-      val:   '2 / 7',
-      sub:   'Budget · Portfolio — 5 en construction',
+      val:   '3 / 7',
+      sub:   'Budget · Portfolio · Planning — 4 en construction',
       cls:   '',
     },
     {
@@ -347,7 +347,7 @@ if (!monthExp.length && !currentMonthIncomes.length) {
 const ROADMAP = [
   { num: '01', icon: '💰', name: 'Budget',    desc: 'Suivi des dépenses & revenus',        badge: 'done',   label: 'terminé'  },
   { num: '02', icon: '💼', name: 'Portfolio', desc: 'CV · identité · projets',              badge: 'done',   label: 'terminé'  },
-  { num: '03', icon: '🗓️', name: 'Planning',  desc: 'Emploi du temps optimisé',             badge: 'active', label: 'en cours' },
+  { num: '03', icon: '🗓️', name: 'Planning',  desc: 'Emploi du temps optimisé',             badge: 'done',   label: 'terminé'  },
   { num: '04', icon: '📚', name: 'Tracker',   desc: 'Lecture · cours · progression',        badge: 'soon',   label: 'à venir'  },
   { num: '05', icon: '🎮', name: 'Backlog',   desc: 'Jeux · statuts · temps de jeu',        badge: 'soon',   label: 'à venir'  },
   { num: '06', icon: '📥', name: 'Inbox',     desc: 'Centralisation des emails importants', badge: 'soon',   label: 'à venir'  },
@@ -368,6 +368,98 @@ ROADMAP.forEach(r => {
     <div class="rm-badge ${r.badge}">${r.label}</div>`;
   roadmapEl.appendChild(div);
 });
+
+/* ═══════════════════════════════════════════
+   PLANNING PANEL — aperçu depuis le dashboard
+═══════════════════════════════════════════ */
+(function renderPlanningPanel() {
+  const el = document.getElementById('planning-body');
+  if (!el) return;
+
+  const COLORS_P = {
+    wake: '#e2ff7c', meal: '#60a5fa', course: '#f59e0b',
+    revision: '#34d399', leisure: '#a78bfa', sleep: '#6b6a6f',
+  };
+  const LABELS_P = {
+    wake: 'réveil', meal: 'repas', course: 'cours',
+    revision: 'révision', leisure: 'temps libre', sleep: 'coucher',
+  };
+
+  function toTime(mins) {
+    const h = Math.floor(mins / 60) % 24;
+    const m = mins % 60;
+    return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+  }
+  function durLabel(mins) {
+    if (mins <= 0) return '0 min';
+    const h = Math.floor(mins / 60), m = mins % 60;
+    if (h === 0) return `${m} min`;
+    if (m === 0) return `${h}h`;
+    return `${h}h${String(m).padStart(2,'0')}`;
+  }
+
+  let data = null;
+  try { data = JSON.parse(localStorage.getItem('planning_v1') || 'null'); } catch(e) {}
+
+  const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })();
+  const today    = new Date().toISOString().slice(0, 10);
+
+  if (!data || (data.date !== tomorrow && data.date !== today)) {
+    el.innerHTML = `
+      <div style="padding:20px 0;text-align:center;color:var(--muted);font-size:12px">
+        aucun planning — <a href="https://cl0s3s.github.io/planning/" target="_blank" style="color:var(--accent);text-decoration:none">planifie demain ↗</a>
+      </div>`;
+    return;
+  }
+
+  // Stats chips
+  const s = data.stats || {};
+  const chips = [
+    { color: COLORS_P.course,   val: durLabel(s.totalCourse   || 0), lbl: 'cours'    },
+    { color: COLORS_P.revision, val: durLabel(s.totalRevision || 0), lbl: 'révision' },
+    { color: COLORS_P.leisure,  val: durLabel(s.totalLeisure  || 0), lbl: 'loisirs'  },
+  ];
+
+  const statsHtml = chips.map(c => `
+    <div style="display:flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--border);border-radius:99px;font-size:11px;background:var(--bg3)">
+      <div style="width:6px;height:6px;border-radius:50%;background:${c.color};flex-shrink:0"></div>
+      <span style="color:var(--text);font-weight:500">${c.val}</span>
+      <span style="color:var(--muted)">${c.lbl}</span>
+    </div>`).join('');
+
+  // Timeline (on affiche les 6 premiers blocs)
+  const preview = (data.blocks || []).slice(0, 7);
+  const tlHtml = preview.map(b => {
+    const color = COLORS_P[b.type] || '#6b6a6f';
+    const tag   = LABELS_P[b.type] || b.type;
+    const timeStr = b.dur > 0
+      ? `${toTime(b.start)} → ${toTime(b.end)}`
+      : toTime(b.start);
+    return `
+      <div style="display:flex;align-items:center;gap:0;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="width:80px;flex-shrink:0;font-family:var(--font-disp);font-size:12px;font-weight:600;color:var(--text)">${toTime(b.start)}</div>
+        <div style="width:3px;align-self:stretch;background:${color};margin-right:12px;border-radius:2px"></div>
+        <div style="flex:1;font-size:12px;color:var(--text)">${b.name}</div>
+        <div style="font-size:10px;padding:2px 7px;border-radius:99px;background:${color}18;color:${color};border:1px solid ${color}44;white-space:nowrap">${tag}</div>
+      </div>`;
+  }).join('');
+
+  const moreCount = (data.blocks || []).length - preview.length;
+  const moreHtml  = moreCount > 0
+    ? `<div style="padding:10px 0;text-align:center;font-size:11px;color:var(--muted)">+${moreCount} blocs — <a href="https://cl0s3s.github.io/planning/" target="_blank" style="color:var(--accent);text-decoration:none">voir tout ↗</a></div>`
+    : '';
+
+  const dateObj = new Date(data.date + 'T12:00:00');
+  const dateLabel = data.date === today ? "aujourd'hui" :
+    dateObj.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+
+  el.innerHTML = `
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px">${dateLabel}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">${statsHtml}</div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-md);padding:0 14px">
+      ${tlHtml}${moreHtml}
+    </div>`;
+})();
 
 /* ═══════════════════════════════════════════
    ENTRANCE ANIMATIONS
