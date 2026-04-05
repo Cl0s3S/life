@@ -309,8 +309,8 @@ if (!monthExp.length && !currentMonthIncomes.length) {
     {
       icon:  '🧩',
       label: 'modules actifs',
-      val:   '5 / 7',
-      sub:   'Budget · Portfolio · Planning · Tracker · Backlog — 2 en construction',
+      val:   '6 / 7',
+      sub:   'Budget · Portfolio · Planning · Tracker · Backlog · Inbox — 1 restant',
       cls:   '',
     },
     {
@@ -350,7 +350,7 @@ const ROADMAP = [
   { num: '03', icon: '🗓️', name: 'Planning',  desc: 'Emploi du temps optimisé',             badge: 'done',   label: 'terminé'  },
   { num: '04', icon: '📚', name: 'Tracker',   desc: 'Lecture · cours · progression',        badge: 'done',   label: 'terminé'  },
   { num: '05', icon: '🎮', name: 'Backlog',   desc: 'Jeux · statuts · temps de jeu',        badge: 'done',   label: 'terminé'  },
-  { num: '06', icon: '📥', name: 'Inbox',     desc: 'Centralisation des emails importants', badge: 'soon',   label: 'à venir'  },
+  { num: '06', icon: '📥', name: 'Inbox',     desc: 'Centralisation des emails importants', badge: 'done',   label: 'terminé'  },
   { num: '07', icon: '📊', name: 'Insights',  desc: 'Analyse globale · recommandations IA', badge: 'soon',   label: 'dernier'  },
 ];
 
@@ -630,6 +630,96 @@ ROADMAP.forEach(r => {
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-md);padding:0 14px">
       ${listHtml || '<div style="padding:14px 0;text-align:center;font-size:12px;color:var(--muted)">aucun jeu</div>'}
       ${moreCount}
+    </div>`;
+})();
+
+/* ═══════════════════════════════════════════
+   INBOX PANEL — aperçu depuis le dashboard
+═══════════════════════════════════════════ */
+(function renderInboxPanel() {
+  const el = document.getElementById('inbox-body');
+  if (!el) return;
+
+  let accounts = [], rules = [], mails = [];
+  try { accounts = JSON.parse(localStorage.getItem('inbox_accounts_v1') || '[]'); } catch(e) {}
+  try { rules    = JSON.parse(localStorage.getItem('inbox_rules_v1')    || '[]'); } catch(e) {}
+  try { mails    = JSON.parse(localStorage.getItem('inbox_mails_v1')    || '[]'); } catch(e) {}
+
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function rel(iso) {
+    const diff = Date.now() - new Date(iso).getTime();
+    const min = Math.floor(diff/60000), h = Math.floor(min/60), d = Math.floor(h/24);
+    if (min < 1) return "à l'instant";
+    if (min < 60) return `${min}min`;
+    if (h < 24) return `${h}h`;
+    return `${d}j`;
+  }
+
+  if (!accounts.length) {
+    el.innerHTML = `<div style="padding:20px 0;text-align:center;color:var(--muted);font-size:12px">
+      configure tes boîtes Gmail — <a href="https://cl0s3s.github.io/inbox/" target="_blank" style="color:var(--accent);text-decoration:none">ouvrir inbox ↗</a>
+    </div>`;
+    return;
+  }
+
+  const total  = mails.length;
+  const unread = mails.filter(m => !m.read).length;
+  const today  = mails.filter(m => new Date(m.date).toDateString() === new Date().toDateString()).length;
+
+  const statsHtml = `
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;margin-bottom:16px">
+      <div style="padding:12px 14px;border-right:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">non lus</div>
+        <div style="font-family:var(--font-disp);font-size:20px;font-weight:700;color:${unread > 0 ? 'var(--accent)' : 'var(--text)'}">${unread}</div>
+      </div>
+      <div style="padding:12px 14px;border-right:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">aujourd'hui</div>
+        <div style="font-family:var(--font-disp);font-size:20px;font-weight:700;color:var(--text)">${today}</div>
+      </div>
+      <div style="padding:12px 14px">
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">boîtes</div>
+        <div style="font-family:var(--font-disp);font-size:20px;font-weight:700;color:var(--text)">${accounts.length}</div>
+      </div>
+    </div>`;
+
+  // Last 5 mails
+  const recent = [...mails].sort((a,b) => new Date(b.date)-new Date(a.date)).slice(0,5);
+
+  if (!recent.length) {
+    el.innerHTML = statsHtml + `<div style="text-align:center;color:var(--muted);font-size:12px;padding:12px 0">
+      aucun mail — <a href="https://cl0s3s.github.io/inbox/" target="_blank" style="color:var(--accent);text-decoration:none">ajouter ↗</a>
+    </div>`;
+    return;
+  }
+
+  const mailsHtml = recent.map(m => {
+    const acc = accounts.find(a => a.id === m.accountId);
+    const matchedR = rules.filter(r => (m.matchedRules||[]).includes(r.id));
+    const tagHtml = matchedR.slice(0,2).map(r =>
+      `<span style="font-size:10px;padding:1px 6px;border-radius:3px;background:${r.color}18;color:${r.color};border:1px solid ${r.color}33">${esc(r.name)}</span>`
+    ).join('');
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="width:6px;height:6px;border-radius:50%;background:${m.read ? 'transparent' : 'var(--accent)'};border:${m.read ? '1px solid var(--muted2)' : 'none'};flex-shrink:0"></div>
+        <div style="width:28px;height:28px;border-radius:50%;background:${acc?.color||'#6b6a6f'};display:flex;align-items:center;justify-content:center;font-family:var(--font-disp);font-size:10px;font-weight:700;color:#0c0c0e;flex-shrink:0">${(acc?.label||'?').slice(0,2).toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+            <div style="font-size:12px;color:var(--text);${m.read?'':'font-weight:500'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">${esc(m.from)}</div>
+            <div style="font-size:10px;color:var(--muted);white-space:nowrap;flex-shrink:0">${rel(m.date)}</div>
+          </div>
+          <div style="font-size:12px;color:${m.read?'var(--muted)':'var(--text)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${m.read?'':'font-family:var(--font-disp);font-weight:600'}">${esc(m.subject)}</div>
+          ${tagHtml ? `<div style="display:flex;gap:4px;margin-top:3px">${tagHtml}</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+
+  const moreCount = mails.length > 5
+    ? `<div style="padding:10px 0;text-align:center;font-size:11px;color:var(--muted)">+${mails.length-5} mails — <a href="https://cl0s3s.github.io/inbox/" target="_blank" style="color:var(--accent);text-decoration:none">voir tout ↗</a></div>`
+    : '';
+
+  el.innerHTML = statsHtml + `
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-md);padding:0 14px">
+      ${mailsHtml}${moreCount}
     </div>`;
 })();
 
