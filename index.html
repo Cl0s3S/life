@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>life. — dashboard</title>
+  <meta name="theme-color" content="#0c0c0e">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="noise"></div>
+
+<!-- ── HEADER ── -->
+<header class="hdr">
+  <div class="hdr-left">
+    <div class="hdr-logo">life<span>.</span></div>
+    <div class="hdr-version">v0.2</div>
+  </div>
+  <div class="hdr-right">
+    <div class="hdr-date" id="hdr-date"></div>
+    <div class="hdr-modules-count">2 / 7 modules</div>
+  </div>
+</header>
+
+<!-- ── NAV STRIP ── -->
+<nav class="nav-strip">
+  <a class="mod-pill active" href="https://cl0s3s.github.io/budget/" target="_blank">
+    <div class="pill-dot"></div>budget<span class="pill-arrow">↗</span>
+  </a>
+  <a class="mod-pill active" href="https://cl0s3s.github.io/zer0-portfolio/" target="_blank">
+    <div class="pill-dot"></div>portfolio<span class="pill-arrow">↗</span>
+  </a>
+  <div class="mod-pill soon"><div class="pill-dot"></div>inbox</div>
+  <div class="mod-pill soon"><div class="pill-dot"></div>backlog</div>
+  <div class="mod-pill soon"><div class="pill-dot"></div>tracker</div>
+  <div class="mod-pill soon"><div class="pill-dot"></div>planning</div>
+  <div class="mod-pill soon"><div class="pill-dot"></div>insights</div>
+</nav>
+
+<!-- ── BODY ── -->
+<main class="body">
+
+  <!-- ══ BUDGET ══ -->
+  <div class="panel span2" data-anim data-delay="0">
+    <div class="panel-hdr">
+      <div class="panel-title">💰 budget</div>
+      <a class="panel-link" href="https://cl0s3s.github.io/budget/" target="_blank">ouvrir ↗</a>
+    </div>
+    <div class="panel-body">
+      <div class="b-amount" id="b-left">— €</div>
+      <div class="b-sub">disponible ce mois — <span id="b-month"></span></div>
+      <div class="b-bar-wrap"><div class="b-bar" id="b-bar" style="width:0%"></div></div>
+      <div class="b-stats">
+        <div class="b-stat">
+          <div class="b-stat-lbl">budget</div>
+          <div class="b-stat-val" id="b-total">—</div>
+        </div>
+        <div class="b-sep"></div>
+        <div class="b-stat">
+          <div class="b-stat-lbl">dépensé</div>
+          <div class="b-stat-val" id="b-spent">—</div>
+        </div>
+        <div class="b-sep"></div>
+        <div class="b-stat">
+          <div class="b-stat-lbl">épargné</div>
+          <div class="b-stat-val" id="b-saved">—</div>
+        </div>
+      </div>
+
+      <div class="slbl">enveloppes</div>
+      <div class="env-grid" id="env-grid"></div>
+
+      <div class="slbl" style="margin-top:20px">dernières entrées</div>
+      <div class="hist-list" id="hist-list"></div>
+
+      <div class="slbl" style="margin-top:20px">analyse du mois</div>
+      <div class="stat-cards" id="stat-cards"></div>
+    </div>
+  </div>
+
+  <!-- ══ PORTFOLIO ══ -->
+  <div class="panel" data-anim data-delay="80">
+    <div class="panel-hdr">
+      <div class="panel-title">💼 portfolio</div>
+      <a class="panel-link" href="https://cl0s3s.github.io/zer0-portfolio/" target="_blank">ouvrir ↗</a>
+    </div>
+    <div class="panel-body">
+      <div class="profile-row">
+        <div class="avatar">LS</div>
+        <div>
+          <div class="profile-name">Lubin Serres</div>
+          <div class="profile-role">Cybersécurité & IA</div>
+        </div>
+        <div class="status-dot" title="disponible"></div>
+      </div>
+      <div class="slbl">compétences</div>
+      <div class="skills-list" id="skills-list"></div>
+      <div class="slbl">stack</div>
+      <div class="tags-row" id="tags-row"></div>
+    </div>
+  </div>
+
+  <!-- ══ PROJECTS ══ -->
+  <div class="panel" data-anim data-delay="140">
+    <div class="panel-hdr">
+      <div class="panel-title">🚀 projets</div>
+      <a class="panel-link" href="https://cl0s3s.github.io/zer0-portfolio/" target="_blank">voir tout ↗</a>
+    </div>
+    <div class="panel-body">
+      <div class="proj-list" id="proj-list"></div>
+    </div>
+  </div>
+
+  <!-- ══ INSIGHTS ══ -->
+  <div class="panel full" data-anim data-delay="200">
+    <div class="panel-hdr">
+      <div class="panel-title">📊 insights</div>
+      <div class="panel-link">analyse globale</div>
+    </div>
+    <div class="panel-body" id="insights-body"></div>
+  </div>
+
+  <!-- ══ ROADMAP ══ -->
+  <div class="panel full" data-anim data-delay="260">
+    <div class="panel-hdr">
+      <div class="panel-title">🗺 roadmap</div>
+      <div class="panel-link">7 modules</div>
+    </div>
+    <div class="panel-body">
+      <div class="roadmap" id="roadmap"></div>
+    </div>
+  </div>
+
+  <!-- ══ SOON ══ -->
+  <div class="panel" data-anim data-delay="300">
+    <div class="soon-panel">
+      <div class="soon-icon">🎮</div>
+      <div class="soon-label">backlog</div>
+      <div class="soon-badge">prochainement</div>
+    </div>
+  </div>
+  <div class="panel" data-anim data-delay="340">
+    <div class="soon-panel">
+      <div class="soon-icon">📚</div>
+      <div class="soon-label">tracker</div>
+      <div class="soon-badge">prochainement</div>
+    </div>
+  </div>
+  <div class="panel" data-anim data-delay="380">
+    <div class="soon-panel">
+      <div class="soon-icon">📥</div>
+      <div class="soon-label">inbox</div>
+      <div class="soon-badge">prochainement</div>
+    </div>
+  </div>
+  <div class="panel" data-anim data-delay="420">
+    <div class="soon-panel">
+      <div class="soon-icon">🗓️</div>
+      <div class="soon-label">planning</div>
+      <div class="soon-badge">prochainement</div>
+    </div>
+  </div>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
