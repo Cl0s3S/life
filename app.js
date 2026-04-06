@@ -309,8 +309,8 @@ if (!monthExp.length && !currentMonthIncomes.length) {
     {
       icon:  '🧩',
       label: 'modules actifs',
-      val:   '6 / 7',
-      sub:   'Budget · Portfolio · Planning · Tracker · Backlog · Inbox — 1 restant',
+      val:   '7 / 7',
+      sub:   'Tous les modules actifs 🎉',
       cls:   '',
     },
     {
@@ -351,7 +351,7 @@ const ROADMAP = [
   { num: '04', icon: '📚', name: 'Tracker',   desc: 'Lecture · cours · progression',        badge: 'done',   label: 'terminé'  },
   { num: '05', icon: '🎮', name: 'Backlog',   desc: 'Jeux · statuts · temps de jeu',        badge: 'done',   label: 'terminé'  },
   { num: '06', icon: '📥', name: 'Inbox',     desc: 'Centralisation des emails importants', badge: 'done',   label: 'terminé'  },
-  { num: '07', icon: '📊', name: 'Insights',  desc: 'Analyse globale · recommandations IA', badge: 'soon',   label: 'dernier'  },
+  { num: '07', icon: '📊', name: 'Insights',  desc: 'Analyse globale · recommandations IA', badge: 'done',   label: 'terminé'  },
 ];
 
 const roadmapEl = document.getElementById('roadmap');
@@ -721,6 +721,88 @@ ROADMAP.forEach(r => {
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r-md);padding:0 14px">
       ${mailsHtml}${moreCount}
     </div>`;
+})();
+
+/* ═══════════════════════════════════════════
+   INSIGHTS PANEL — lien vers le module complet
+═══════════════════════════════════════════ */
+(function renderInsightsPanelFinal() {
+  const el = document.getElementById('insights-body');
+  if (!el) return;
+
+  // Recalculate score from all modules
+  function getMonthKey(iso) { const d = new Date(iso); return `${d.getFullYear()}-${d.getMonth()+1}`; }
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}-${now.getMonth()+1}`;
+  const todayKey = now.toISOString().slice(0,10);
+
+  let expenses = [], incomes = [], games = [], books = [], planning = {}, mails = [];
+  try { expenses = JSON.parse(localStorage.getItem('budget_v4') || '[]'); } catch(e) {}
+  try { incomes  = JSON.parse(localStorage.getItem('budget_inc') || '[]'); } catch(e) {}
+  try { games    = JSON.parse(localStorage.getItem('backlog_v1') || '[]'); } catch(e) {}
+  try { books    = JSON.parse(localStorage.getItem('tracker_v1') || '[]'); } catch(e) {}
+  try { planning = JSON.parse(localStorage.getItem('planning_v1') || '{}'); } catch(e) {}
+  try { mails    = JSON.parse(localStorage.getItem('inbox_mails_v1') || '[]'); } catch(e) {}
+
+  const monthExp   = expenses.filter(e => getMonthKey(e.date) === monthKey);
+  const budget     = 50 + incomes.filter(i => getMonthKey(i.date) === monthKey).reduce((a,b) => a+b.amount, 0);
+  const spent      = monthExp.reduce((a,b) => a+b.amount, 0);
+  const budgetPct  = Math.min((spent/budget)*100, 100);
+  const saved      = monthExp.filter(e => e.cat === 'Épargne').reduce((a,b) => a+b.amount, 0);
+  const saveRate   = budget > 0 ? (saved/budget)*100 : 0;
+  const unread     = mails.filter(m => !m.read).length;
+  const booksRead  = books.filter(b => b.status === 'reading').length;
+  const tomorrowK  = (() => { const d = new Date(); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })();
+  const hasPlan    = planning.date === todayKey || planning.date === tomorrowK;
+  const gameMinsW  = games.reduce((acc, g) => acc + (g.sessions||[]).filter(s => new Date(s.date) >= new Date(Date.now()-7*86400000)).reduce((a,s) => a+s.durationMins, 0), 0);
+
+  const scores = {
+    budget:   budgetPct <= 60 ? 100 : budgetPct <= 80 ? 70 : budgetPct <= 100 ? 40 : 0,
+    planning: hasPlan ? 100 : 30,
+    tracker:  booksRead > 0 ? 70 : 20,
+    backlog:  gameMinsW > 0 && gameMinsW <= 1260 ? 100 : gameMinsW > 1260 ? 50 : 60,
+    inbox:    unread === 0 ? 100 : unread <= 5 ? 70 : unread <= 15 ? 40 : 20,
+    savings:  saveRate >= 15 ? 100 : saveRate >= 10 ? 70 : saveRate >= 5 ? 40 : 20,
+  };
+  const globalScore = Math.round(Object.values(scores).reduce((a,b) => a+b, 0) / 6);
+  const scoreColor  = globalScore >= 75 ? '#34d399' : globalScore >= 50 ? '#f59e0b' : '#f87171';
+  const scoreLabel  = globalScore >= 80 ? 'Excellent 🌟' : globalScore >= 65 ? 'Bon équilibre ✓' : globalScore >= 50 ? 'Correct' : 'À améliorer ⚠';
+
+  const modRows = [
+    { label: 'Budget',   score: scores.budget   },
+    { label: 'Planning', score: scores.planning  },
+    { label: 'Lecture',  score: scores.tracker   },
+    { label: 'Gaming',   score: scores.backlog   },
+    { label: 'Inbox',    score: scores.inbox     },
+    { label: 'Épargne',  score: scores.savings   },
+  ];
+
+  const sc = (s) => s >= 75 ? '#34d399' : s >= 50 ? '#f59e0b' : '#f87171';
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:24px;margin-bottom:20px">
+      <div>
+        <div style="font-size:10px;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px">score d'équilibre</div>
+        <div style="font-family:var(--font-disp);font-size:48px;font-weight:700;letter-spacing:-0.04em;color:${scoreColor};line-height:1">${globalScore}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">${scoreLabel}</div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+        ${modRows.map(m => `
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="font-size:11px;color:var(--muted);width:72px;flex-shrink:0">${m.label}</div>
+            <div style="flex:1;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden">
+              <div style="height:4px;border-radius:2px;background:${sc(m.score)};width:${m.score}%;transition:width 0.8s"></div>
+            </div>
+            <div style="font-size:11px;font-family:var(--font-disp);font-weight:600;color:${sc(m.score)};width:26px;text-align:right">${m.score}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+    <a href="https://cl0s3s.github.io/insights/" target="_blank"
+       style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;background:rgba(226,255,124,0.08);border:1px solid rgba(226,255,124,0.2);border-radius:var(--r-md);color:var(--accent);font-family:var(--font-mono);font-size:12px;text-decoration:none;transition:background 0.2s"
+       onmouseover="this.style.background='rgba(226,255,124,0.14)'"
+       onmouseout="this.style.background='rgba(226,255,124,0.08)'">
+      ✨ voir les recommandations Claude ↗
+    </a>`;
 })();
 
 /* ═══════════════════════════════════════════
